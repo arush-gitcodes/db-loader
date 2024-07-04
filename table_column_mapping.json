@@ -1,0 +1,5 @@
+{
+    "bank_account": ["accountid", "accountname", "accounttype" , "balance" , "currency"],
+    "party": ["partyid", "firstname", "lastname" , "email" , "phone"],
+    "transaction": ["transactionid" , "accountid" , "transactiondate" , "description" , "amount"]
+}

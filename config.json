@@ -1,0 +1,10 @@
+{
+  "username": "postgres",
+  "password": "Arush@123",
+  "host": "localhost",
+  "port": 5432,
+  "name": "projdb",
+  "zip_file_path": "C:\\Users\\Arush Jha\\OneDrive\\Desktop\\task.zip",
+  "row_delimiter": "~@^*^@~",
+  "column_delimiter": "~##~"
+}
