@@ -1,5 +1,12 @@
 {
-    "bank_account": ["accountid", "accountname", "accounttype" , "balance" , "currency"],
-    "party": ["partyid", "firstname", "lastname" , "email" , "phone"],
-    "transaction": ["transactionid" , "accountid" , "transactiondate" , "description" , "amount"]
+  "loan": {
+    "data_file": "bank_loan",
+    "target_columns": ["loan_id", "amount"],
+    "source_columns": ["loan_id", "account_id", "amount", "interest_rate", "start_date"]
+  },
+  "party": {
+    "data_file": "party",
+    "target_columns": ["partyid", "firstname", "lastname" , "email"],
+    "source_columns": ["partyid", "firstname", "lastname" , "email" , "phone"]
+  }
 }
