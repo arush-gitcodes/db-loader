@@ -5,6 +5,7 @@ import os
 import zipfile
 import logging
 from datetime import datetime
+import duckdb
 
 
 class DatabaseLoader:
@@ -88,9 +89,29 @@ class DatabaseLoader:
 
     def log_error_to_file(self, table_name, error_message):
         os.makedirs(self.error_dir, exist_ok=True)
-        error_file_path = os.path.join(self.error_dir, f"{table_name}_error.dat")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        error_file_name = f"{table_name}_error_{timestamp}.dat"
+        error_file_path = os.path.join(self.error_dir, error_file_name)
         with open(error_file_path, 'a') as error_file:
             error_file.write(f"{datetime.now()} - {error_message}\n")
+
+    def load_data_to_duckdb(self, data, source_columns, transformation_query):
+        # Create an in-memory DuckDB database
+        con = duckdb.connect(database=':memory:')
+
+        # Create a staging table in DuckDB with all source columns
+        create_table_query = f"CREATE TABLE staging ({', '.join([f'{col} VARCHAR' for col in source_columns])});"
+        con.execute(create_table_query)
+
+        # Insert data into DuckDB staging table
+        placeholders = ', '.join(['?'] * len(source_columns))
+        insert_query = f"INSERT INTO staging ({', '.join(source_columns)}) VALUES ({placeholders});"
+        con.executemany(insert_query, data)
+
+        # Execute the transformation query
+        transformed_data = con.execute(transformation_query.replace("<DUCKDB>", "staging")).fetchall()
+        con.close()
+        return transformed_data
 
     def insert_data(self):
         # Extract files from the ZIP archive
@@ -105,6 +126,7 @@ class DatabaseLoader:
                         target_columns = columns['target_columns']
                         source_columns = columns['source_columns']
                         data_file_name = columns['data_file']
+                        transformation_query = columns['transformation_query']
 
                         # Check if table name present in mapping file exists in PG database
                         if not self.table_exists(cursor, table_name):
@@ -129,33 +151,45 @@ class DatabaseLoader:
 
                             for line in data_lines:
                                 values = line.strip().split(self.column_delimiter)
-                                selected_values = [values[source_columns.index(col)] for col in target_columns]
 
-                                if len(selected_values) != len(target_columns):
+                                # Check if the number of values is sufficient before selecting columns
+                                if len(values) < len(target_columns):
                                     error_message = (
                                         f"Column count mismatch in {table_name}: {line} "
-                                        f"(expected {len(target_columns)} columns, got {len(selected_values)} columns)"
+                                        f"(expected at least {len(target_columns)} columns, got {len(values)} columns)"
                                     )
                                     logging.error(error_message)
                                     self.log_error_to_file(table_name, error_message)
                                     continue
 
+                                selected_values = [values[source_columns.index(col)] for col in source_columns]
+
                                 batch.append(tuple(selected_values))
 
                                 if len(batch) >= self.batch_size:
+                                    # Load data to DuckDB, transform and fetch the results
+                                    transformed_data = self.load_data_to_duckdb(batch, source_columns, transformation_query)
+
+                                    # Insert transformed data to PostgreSQL
                                     insert_query = (
                                         f"INSERT INTO {self.db_schema}.{table_name} ({', '.join(target_columns)}) "
                                         f"VALUES %s"
                                     )
-                                    psycopg2.extras.execute_values(cursor, insert_query, batch)
+
+                                    psycopg2.extras.execute_values(cursor, insert_query, transformed_data)
                                     batch = []
 
                             if batch:
+                                # Load remaining data to DuckDB, transform and fetch the results
+                                transformed_data = self.load_data_to_duckdb(batch, source_columns, transformation_query)
+
+                                # Insert transformed data to PostgreSQL
                                 insert_query = (
                                     f"INSERT INTO {self.db_schema}.{table_name} ({', '.join(target_columns)}) "
                                     f"VALUES %s"
                                 )
-                                psycopg2.extras.execute_values(cursor, insert_query, batch)
+
+                                psycopg2.extras.execute_values(cursor, insert_query, transformed_data)
 
                         end_time = datetime.now()
                         logging.info(f"Completed data ingestion for table {self.db_schema}.{table_name} at {end_time}")
@@ -169,5 +203,3 @@ class DatabaseLoader:
             logging.error(f"Database error: {db_error}")
         except Exception as e:
             logging.error(f"Error: {e}")
-
-
