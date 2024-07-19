@@ -13,7 +13,7 @@ class DatabaseLoader:
         self.config = self.read_json(config_path)
         self.table_column_mapping = self.read_json(mapping_path)
 
-        log_dir_path = self.config.get('log_dir_path', None)
+        log_dir_path = self.config.get('log_dir', None)
         self.setup_logging(log_dir_path)
 
         self.log_startup_message()
@@ -25,7 +25,7 @@ class DatabaseLoader:
         self.db_name = self.config['db_name']
         self.db_schema = self.config.get('db_schema', 'public')  # Use 'public' if no schema is specified
 
-        self.zip_file_path = self.config['zip_file_path']
+        self.zip_file_path = self.config['zip_dir']
         self.encoding = self.config.get('encoding', 'utf-8')
         self.row_delimiter = self.config['row_delimiter']
         self.column_delimiter = self.config['column_delimiter']
@@ -42,14 +42,14 @@ class DatabaseLoader:
             return json.load(f)
 
     @staticmethod
-    def setup_logging(log_dir_path=None):
+    def setup_logging(log_dir=None):
         log_format = '%(asctime)s - %(levelname)s - %(message)s'
         log_level = logging.INFO
 
-        if log_dir_path:
+        if log_dir:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             log_file_name = f"db_loader_application_{timestamp}.log"
-            log_file_path = os.path.join(log_dir_path, log_file_name)
+            log_file_path = os.path.join(log_dir, log_file_name)
             logging.basicConfig(level=log_level, format=log_format, filename=log_file_path, filemode='a')
         else:
             logging.basicConfig(level=log_level, format=log_format)
@@ -168,7 +168,8 @@ class DatabaseLoader:
 
                                 if len(batch) >= self.batch_size:
                                     # Load data to DuckDB, transform and fetch the results
-                                    transformed_data = self.load_data_to_duckdb(batch, source_columns, transformation_query)
+                                    transformed_data = self.load_data_to_duckdb(batch, source_columns,
+                                                                                transformation_query)
 
                                     # Insert transformed data to PostgreSQL
                                     insert_query = (
@@ -203,3 +204,4 @@ class DatabaseLoader:
             logging.error(f"Database error: {db_error}")
         except Exception as e:
             logging.error(f"Error: {e}")
+

@@ -13,8 +13,8 @@
   },
   "party": {
     "data_file": "party",
-    "target_columns": ["partyid", "firstname", "lastname" , "email"],
-    "source_columns": ["partyid", "firstname", "lastname" , "email" , "phone"],
-    "transformation_query": ""
+    "target_columns": ["firstname", "middlename", "lastname", "birthdate", "created_at", "last_login", "is_active", "num_guests", "total_spent", "avg_rating", "score", "email_address", "net_worth" ],
+    "source_columns": ["firstname", "middlename", "lastname", "birthdate", "created_at", "last_login", "is_active", "num_guests", "total_spent", "avg_rating", "score", "email_address", "net_worth" ],
+    "transformation_query": "SELECT firstname,middlename,lastname,birthdate,created_at,last_login,is_active,num_guests,total_spent,avg_rating,score,email_address,net_worth FROM <DUCKDB>"
   }
 }
