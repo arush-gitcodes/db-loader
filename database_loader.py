@@ -13,10 +13,14 @@ class DatabaseLoader:
         self.config = self.read_json(config_path)
         self.table_column_mapping = self.read_json(mapping_path)
 
-        log_dir_path = self.config.get('log_dir', None)
-        self.setup_logging(log_dir_path)
+        log_dir = self.config.get('log_dir', None)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        self.setup_logging(log_dir)
 
         self.log_startup_message()
+
+        self.validate_database()
 
         self.db_host = self.config['db_host']
         self.db_username = self.config['db_username']
@@ -25,7 +29,9 @@ class DatabaseLoader:
         self.db_name = self.config['db_name']
         self.db_schema = self.config.get('db_schema', 'public')  # Use 'public' if no schema is specified
 
-        self.zip_file_path = self.config['zip_dir']
+        self.zip_dir = self.config['zip_dir']
+        if not os.path.exists(self.zip_dir):
+            raise FileNotFoundError(f"ZIP directory not found: {self.zip_dir}")
         self.encoding = self.config.get('encoding', 'utf-8')
         self.row_delimiter = self.config['row_delimiter']
         self.column_delimiter = self.config['column_delimiter']
@@ -34,7 +40,9 @@ class DatabaseLoader:
         self.skip_header_rows = self.config.get('skip_header_rows', 0)
         self.skip_footer_rows = self.config.get('skip_footer_rows', 0)
 
-        self.error_dir = self.config.get('error_dir', 'error_logs')
+        self.error_dir = self.config.get('error_dir', None)
+        if not os.path.exists(self.error_dir):
+            os.makedirs(self.error_dir)
 
     @staticmethod
     def read_json(file_path):
@@ -59,14 +67,25 @@ class DatabaseLoader:
         console.setFormatter(logging.Formatter(log_format))
         logging.getLogger().addHandler(console)
 
+
     def log_startup_message(self):
         startup_message = f"Db_loader_application started at {datetime.now()}"
         logging.info(startup_message)
 
-    def extract_files(self, zip_file_path, extract_to='extracted_data'):
-        logging.info(f"Extracting files from {zip_file_path} to {extract_to}")
-        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+
+    def extract_files(self, zip_dir, extract_to='extracted_data'):
+        logging.info(f"Extracting files from {zip_dir} to {extract_to}")
+        with zipfile.ZipFile(zip_dir, 'r') as zip_ref:
             zip_ref.extractall(extract_to)
+
+    def validate_database(self):
+        required_credentials = ['db_host', 'db_username', 'db_password', 'db_port', 'db_name']
+        missing_credentials = [cred for cred in required_credentials if
+                               cred not in self.config or not self.config[cred]]
+
+        if missing_credentials:
+            raise ValueError(f"Missing database credentials: {', '.join(missing_credentials)}")
+        logging.info("All required database credentials are provided.")
 
     def connect_to_db(self):
         logging.info("Connecting to the database")
@@ -95,7 +114,7 @@ class DatabaseLoader:
         with open(error_file_path, 'a') as error_file:
             error_file.write(f"{datetime.now()} - {error_message}\n")
 
-    def load_data_to_duckdb(self, data, source_columns, transformation_query):
+    def load_data_to_duckdb(self, data, source_columns,sql_query):
         # Create an in-memory DuckDB database
         con = duckdb.connect(database=':memory:')
 
@@ -109,13 +128,16 @@ class DatabaseLoader:
         con.executemany(insert_query, data)
 
         # Execute the transformation query
-        transformed_data = con.execute(transformation_query.replace("<DUCKDB>", "staging")).fetchall()
+        transformation_query = f"SELECT {sql_query} FROM staging;"
+
+        # Execute the transformation query
+        transformed_data = con.execute(transformation_query).fetchall()
         con.close()
         return transformed_data
 
     def insert_data(self):
         # Extract files from the ZIP archive
-        self.extract_files(self.zip_file_path, extract_to='extracted_data')
+        self.extract_files(self.zip_dir, extract_to='extracted_data')
 
         inserted_tables = 0
         try:
@@ -126,7 +148,7 @@ class DatabaseLoader:
                         target_columns = columns['target_columns']
                         source_columns = columns['source_columns']
                         data_file_name = columns['data_file']
-                        transformation_query = columns['transformation_query']
+                        sql_query = columns['sql_query']
 
                         # Check if table name present in mapping file exists in PG database
                         if not self.table_exists(cursor, table_name):
@@ -169,7 +191,7 @@ class DatabaseLoader:
                                 if len(batch) >= self.batch_size:
                                     # Load data to DuckDB, transform and fetch the results
                                     transformed_data = self.load_data_to_duckdb(batch, source_columns,
-                                                                                transformation_query)
+                                                                                sql_query)
 
                                     # Insert transformed data to PostgreSQL
                                     insert_query = (
@@ -182,7 +204,7 @@ class DatabaseLoader:
 
                             if batch:
                                 # Load remaining data to DuckDB, transform and fetch the results
-                                transformed_data = self.load_data_to_duckdb(batch, source_columns, transformation_query)
+                                transformed_data = self.load_data_to_duckdb(batch, source_columns, sql_query)
 
                                 # Insert transformed data to PostgreSQL
                                 insert_query = (
@@ -200,8 +222,11 @@ class DatabaseLoader:
 
                 conn.commit()
                 logging.info(f"Data inserted successfully into {inserted_tables} tables.")
-        except psycopg2.Error as db_error:
-            logging.error(f"Database error: {db_error}")
+        except psycopg2.OperationalError as e:
+            logging.error(f"Operational error: {e}")
+        except psycopg2.IntegrityError as e:
+            logging.error(f"Integrity error: {e}")
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logging.error(f"General error: {e}")
+
 

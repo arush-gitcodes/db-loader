@@ -3,18 +3,18 @@
     "data_file": "bank_loan",
     "target_columns": ["loan_id", "account_id", "interest_rate"],
     "source_columns": ["loan_id", "account_id", "amount", "interest_rate", "start_date","end_date"],
-    "transformation_query": "SELECT loan_id, RIGHT(account_id, 2) AS account_id ,interest_rate FROM <DUCKDB>"
+    "sql_query": "loan_id, RIGHT(account_id, 2) AS account_id ,interest_rate"
   },
   "employee": {
     "data_file": "employee",
     "target_columns": ["emp_id","emp_name","department_code"],
     "source_columns": ["emp_id","emp_name","department","joining_date"],
-    "transformation_query": "SELECT CAST(emp_id AS INTEGER) AS emp_id, emp_name, LEFT(department, 3) AS department_code FROM <DUCKDB>"
+    "sql_query": "CAST(emp_id AS INTEGER) AS emp_id, emp_name, LEFT(department, 3) AS department_code"
   },
   "party": {
     "data_file": "party",
     "target_columns": ["firstname", "middlename", "lastname", "birthdate", "created_at", "last_login", "is_active", "num_guests", "total_spent", "avg_rating", "score", "email_address", "net_worth" ],
     "source_columns": ["firstname", "middlename", "lastname", "birthdate", "created_at", "last_login", "is_active", "num_guests", "total_spent", "avg_rating", "score", "email_address", "net_worth" ],
-    "transformation_query": "SELECT firstname,middlename,lastname,birthdate,created_at,last_login,is_active,num_guests,total_spent,avg_rating,score,email_address,net_worth FROM <DUCKDB>"
+    "sql_query": "firstname,middlename,lastname,birthdate,created_at,last_login,is_active,num_guests,total_spent,avg_rating,score,email_address,net_worth"
   }
 }
