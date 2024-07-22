@@ -1,0 +1,15 @@
+2024-07-19 16:52:37,739 - INFO - Db_loader_application started at 2024-07-19 16:52:37.738926
+2024-07-19 16:52:37,739 - INFO - Extracting files from C:\Users\Arush Jha\OneDrive\Desktop\task.zip to extracted_data
+2024-07-19 16:52:37,747 - INFO - Connecting to the database
+2024-07-19 16:52:37,835 - INFO - Starting data ingestion for table db_load.loan at 2024-07-19 16:52:37.834251
+2024-07-19 16:52:39,868 - ERROR - Column count mismatch in loan: 
+4~##~104 (expected at least 3 columns, got 2 columns)
+2024-07-19 16:52:39,948 - INFO - Completed data ingestion for table db_load.loan at 2024-07-19 16:52:39.948067
+2024-07-19 16:52:39,967 - INFO - Duration: 0:00:02.113816
+2024-07-19 16:52:39,969 - INFO - Starting data ingestion for table db_load.employee at 2024-07-19 16:52:39.969298
+2024-07-19 16:52:40,238 - INFO - Completed data ingestion for table db_load.employee at 2024-07-19 16:52:40.238801
+2024-07-19 16:52:40,238 - INFO - Duration: 0:00:00.269503
+2024-07-19 16:52:40,239 - INFO - Starting data ingestion for table db_load.party at 2024-07-19 16:52:40.239807
+2024-07-19 16:52:40,380 - INFO - Completed data ingestion for table db_load.party at 2024-07-19 16:52:40.380078
+2024-07-19 16:52:40,380 - INFO - Duration: 0:00:00.140271
+2024-07-19 16:52:40,381 - INFO - Data inserted successfully into 3 tables.
