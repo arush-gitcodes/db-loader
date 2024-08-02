@@ -1,7 +1,7 @@
 {
   "loan": {
     "data_file": "bank_loan",
-    "target_columns": ["loan_id", "account_id", "interest_rate"],
+    "target_columns": ["loan_id", "account_id","interest_rate"],
     "source_columns": ["loan_id", "account_id", "amount", "interest_rate", "start_date","end_date"],
     "sql_query": "loan_id, RIGHT(account_id, 2) AS account_id ,interest_rate"
   },

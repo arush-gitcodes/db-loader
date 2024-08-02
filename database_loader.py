@@ -6,6 +6,7 @@ import zipfile
 import logging
 from datetime import datetime
 import duckdb
+import platform
 
 
 class DatabaseLoader:
@@ -19,6 +20,7 @@ class DatabaseLoader:
         self.setup_logging(log_dir)
 
         self.log_startup_message()
+        self.log_os_info()
 
         self.validate_database()
 
@@ -71,6 +73,10 @@ class DatabaseLoader:
     def log_startup_message(self):
         startup_message = f"Db_loader_application started at {datetime.now()}"
         logging.info(startup_message)
+
+    def log_os_info(self):
+        os_info = platform.platform()
+        logging.info(f"Operating System: {os_info}")
 
 
     def extract_files(self, zip_dir, extract_to='extracted_data'):
